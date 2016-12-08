@@ -9,9 +9,11 @@
 #include "fw/ImGuiApplication.hpp"
 #include "fw/Mesh.hpp"
 #include "fw/OrbitingCamera.hpp"
+#include "fw/Texture.hpp"
 #include "fw/TexturedPhongEffect.hpp"
 #include "fw/UniversalPhongEffect.hpp"
 #include "fw/Vertices.hpp"
+#include "fw/effects/Standard2DEffect.hpp"
 
 namespace kinematic
 {
@@ -36,23 +38,10 @@ protected:
     virtual bool onScroll(double xoffset, double yoffset) override;
     virtual bool onResize() override;
 
-    void updateProjectionMatrix();
-
 private:
-    std::shared_ptr<fw::TexturedPhongEffect> _phongEffect;
-    std::shared_ptr<fw::UniversalPhongEffect> _universalPhongEffect;
-
-    std::shared_ptr<fw::Mesh<fw::VertexNormalTexCoords>> _cube;
-
-    std::shared_ptr<fw::Grid> _grid;
-    std::shared_ptr<fw::FrameMarker> _frameMarker;
-
-    fw::OrbitingCamera _camera;
-    glm::mat4 _projectionMatrix;
-    bool _enableCameraRotations;
-
-    glm::dvec2 _cameraRotationSensitivity;
-    GLuint _testTexture;
+    std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
+    std::shared_ptr<fw::Mesh<fw::StandardVertex2D>> _quadGeometry;
+    std::shared_ptr<fw::Texture> _testTexture;
 };
 
 }
