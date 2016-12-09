@@ -28,6 +28,9 @@ void KinematicChainApplication::onCreate()
 
     _quadGeometry = fw::createQuad2D({1.0f, 1.0f});
 
+    _armController = std::make_shared<RoboticArmController>();
+    _armRendering = std::make_shared<RoboticArmRendering>();
+
     _testTexture = std::make_shared<fw::Texture>(
         fw::getFrameworkResourcePath("textures/checker-base.png")
     );
@@ -43,6 +46,7 @@ void KinematicChainApplication::onUpdate(
 )
 {
     ImGuiApplication::onUpdate(deltaTime);
+    _armController->update(deltaTime);
     ImGui::ShowTestWindow();
 }
 
@@ -51,13 +55,25 @@ void KinematicChainApplication::onRender()
     glClearColor(0.4f, 0.2f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    _standard2DEffect->setModelMatrix({});
-    _standard2DEffect->setViewMatrix({});
-    _standard2DEffect->setProjectionMatrix({});
-    _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
-    _standard2DEffect->begin();
-    _quadGeometry->render();
-    _standard2DEffect->end();
+    auto framebufferSize = getFramebufferSize();
+    auto aspectRatio =
+        static_cast<float>(framebufferSize.x) / framebufferSize.y;
+    auto projection = glm::ortho(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+
+    _armRendering->setArmsThickness(_armController->getVisualThickness());
+    _armRendering->setAlphaAngle(_armController->getArmAlphaAngle());
+    _armRendering->setBetaAngle(_armController->getArmBetaAngle());
+
+    for (const auto& chunk: _armRendering->render())
+    {
+        _standard2DEffect->setModelMatrix(chunk.getModelMatrix());
+        _standard2DEffect->setViewMatrix({});
+        _standard2DEffect->setProjectionMatrix(projection);
+        _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
+        _standard2DEffect->begin();
+        chunk.getMesh()->render();
+        _standard2DEffect->end();
+    }
 
     ImGuiApplication::onRender();
 }

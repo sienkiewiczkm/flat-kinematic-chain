@@ -15,6 +15,9 @@
 #include "fw/Vertices.hpp"
 #include "fw/effects/Standard2DEffect.hpp"
 
+#include "RoboticArmController.hpp"
+#include "RoboticArmRendering.hpp"
+
 namespace kinematic
 {
 
@@ -38,10 +41,15 @@ protected:
     virtual bool onScroll(double xoffset, double yoffset) override;
     virtual bool onResize() override;
 
+    void updateRoboticArmSettings();
+
 private:
     std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
     std::shared_ptr<fw::Mesh<fw::StandardVertex2D>> _quadGeometry;
     std::shared_ptr<fw::Texture> _testTexture;
+
+    std::shared_ptr<RoboticArmController> _armController;
+    std::shared_ptr<RoboticArmRendering> _armRendering;
 };
 
 }

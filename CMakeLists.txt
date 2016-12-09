@@ -16,6 +16,8 @@ include_directories(
 
 add_library(${PROJECT_NAME_LIB}
     source/KinematicChainApplication.cpp
+    source/RoboticArmController.cpp
+    source/RoboticArmRendering.cpp
 )
 
 add_executable(${PROJECT_NAME}
