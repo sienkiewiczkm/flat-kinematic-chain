@@ -51,7 +51,7 @@ std::vector<fw::GeometryChunk> RoboticArmRendering::render()
 
     glm::vec2 p1 = p0 + glm::vec2{
         _firstArmLength * cosf(_alphaAngle),
-        _secondArmLength * sinf(_alphaAngle)
+        _firstArmLength * sinf(_alphaAngle)
     };
 
     glm::vec2 p2 = p1 + glm::vec2{
@@ -88,7 +88,7 @@ std::vector<fw::GeometryChunk> RoboticArmRendering::render()
 
     secondTransform = glm::scale(
         secondTransform,
-        {_firstArmLength, _armsThickness, 1.0f}
+        {_secondArmLength, _armsThickness, 1.0f}
     );
 
     return {

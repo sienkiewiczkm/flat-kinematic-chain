@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include "glm/glm.hpp"
 
 namespace kinematic
 {
@@ -16,11 +17,19 @@ public:
     float getVisualThickness() const;
     float getArmAlphaAngle() const;
     float getArmBetaAngle() const;
+    float getFirstArmLength() const;
+    float getSecondArmLenght() const;
 
 private:
+    bool solveInverseKinematics();
+
+private:
+    glm::vec2 _ikTarget;
+    float _firstArmLength, _secondArmLength;
     float _thickness;
     float _alphaAngle;
     float _betaAngle;
+    bool _lastSolveResult;
 };
 
 }

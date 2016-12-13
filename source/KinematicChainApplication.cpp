@@ -60,6 +60,8 @@ void KinematicChainApplication::onRender()
         static_cast<float>(framebufferSize.x) / framebufferSize.y;
     auto projection = glm::ortho(-aspectRatio, aspectRatio, -1.0f, 1.0f);
 
+    _armRendering->setFirstArmLength(_armController->getFirstArmLength());
+    _armRendering->setSecondArmLength(_armController->getSecondArmLenght());
     _armRendering->setArmsThickness(_armController->getVisualThickness());
     _armRendering->setAlphaAngle(_armController->getArmAlphaAngle());
     _armRendering->setBetaAngle(_armController->getArmBetaAngle());
