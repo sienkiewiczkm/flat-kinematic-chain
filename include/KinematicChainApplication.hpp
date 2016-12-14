@@ -4,6 +4,7 @@
 
 #include "glm/glm.hpp"
 
+#include "fw/AABB.hpp"
 #include "fw/FrameMarker.hpp"
 #include "fw/Grid.hpp"
 #include "fw/ImGuiApplication.hpp"
@@ -41,7 +42,9 @@ protected:
     virtual bool onScroll(double xoffset, double yoffset) override;
     virtual bool onResize() override;
 
-    void updateRoboticArmSettings();
+    glm::vec2 getWorldCursorPos(glm::vec2 screenMousePos) const;
+    glm::mat4 getProjection() const;
+    void grabConstraint();
 
 private:
     std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
@@ -50,6 +53,12 @@ private:
 
     std::shared_ptr<RoboticArmController> _armController;
     std::shared_ptr<RoboticArmRendering> _armRendering;
+
+    bool _isConstraintGrabbed;
+    glm::vec2 _previousGrabWorldPosition;
+    bool _lmbDown;
+    int _selectedConstraint;
+    std::vector<fw::AABB<glm::vec2>> _constraints;
 };
 
 }
