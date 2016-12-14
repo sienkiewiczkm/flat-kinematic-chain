@@ -59,21 +59,34 @@ void KinematicChainApplication::onUpdate(
     if (ImGui::CollapsingHeader("Constraints"))
     {
         ImGui::Text("Select constraints by clicking, move by dragging");
-        ImGui::Button("New");
+
+        if (ImGui::Button("New"))
+        {
+            _constraints.push_back({
+                {-0.5f, -0.5f},
+                {0.5f, 0.5f}
+            });
+        }
 
         if (_selectedConstraint >= 0)
         {
-            ImGui::Button("Delete");
-
-            ImGui::DragFloat2(
-                "Min",
-                glm::value_ptr(_constraints[_selectedConstraint].min)
-            );
-
-            ImGui::DragFloat2(
-                "Max",
-                glm::value_ptr(_constraints[_selectedConstraint].max)
-            );
+            ImGui::SameLine();
+            if (ImGui::Button("Delete"))
+            {
+                std::swap(
+                    _constraints.back(),
+                    _constraints[_selectedConstraint]
+                );
+                _constraints.pop_back();
+                _selectedConstraint = -1;
+            }
+            else
+            {
+                auto& selected = _constraints[_selectedConstraint];
+                auto size = selected.max - selected.min;
+                ImGui::SliderFloat2("Size", glm::value_ptr(size), 0.01f, 10.0f);
+                selected.max = selected.min + size;
+            }
         }
     }
 }
