@@ -149,4 +149,24 @@ glm::vec2 RoboticArmController::getSecondArmEndPoint() const
     return p2;
 }
 
+std::pair<glm::vec2, glm::vec2> RoboticArmController::buildConfiguration(
+    float alpha,
+    float beta
+)
+{
+    glm::vec2 p0{0.0f, 0.0f};
+
+    glm::vec2 p1 = p0 + glm::vec2{
+        _firstArmLength * cosf(alpha),
+        _firstArmLength * sinf(alpha)
+    };
+
+    glm::vec2 p2 = p1 + glm::vec2{
+        _secondArmLength * cosf(alpha + beta),
+        _secondArmLength * sinf(alpha + beta)
+    };
+
+    return {p1, p2};
+}
+
 }

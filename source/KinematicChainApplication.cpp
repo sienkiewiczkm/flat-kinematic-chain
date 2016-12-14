@@ -100,6 +100,83 @@ void KinematicChainApplication::onUpdate(
             }
         }
     }
+
+    if (ImGui::CollapsingHeader("Configuration space"))
+    {
+        if (ImGui::Button("Calculate"))
+        {
+            createAvailabilityMap();
+            _availabilityMapCreated = true;
+        }
+
+        if (_availabilityMapCreated)
+        {
+            int w, h;
+            int miplevel = 0;
+
+            glBindTexture(GL_TEXTURE_2D, _availabilityMapTexture);
+
+            glGetTexLevelParameteriv(
+                GL_TEXTURE_2D,
+                miplevel,
+                GL_TEXTURE_WIDTH,
+                &w
+            );
+
+            glGetTexLevelParameteriv(
+                GL_TEXTURE_2D,
+                miplevel,
+                GL_TEXTURE_HEIGHT,
+                &h
+            );
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+            auto availX = ImGui::GetContentRegionAvailWidth();
+            float scale = std::min(1.0f, availX / w);
+
+            void* imTex = (void*)_availabilityMapTexture;
+
+            ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
+            ImGui::Text("%dx%d", w, h);
+            ImGui::Image(
+                imTex,
+                ImVec2(w*scale, h*scale),
+                ImVec2(0,0),
+                ImVec2(1,1),
+                ImColor(255,255,255,255),
+                ImColor(255,255,255,128)
+            );
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+
+                float focus_sz = 32.0f;
+                float focus_x = ImGui::GetMousePos().x - tex_screen_pos.x - focus_sz * 0.5f;
+                float focus_y = ImGui::GetMousePos().y - tex_screen_pos.y - focus_sz * 0.5f;
+
+                if (focus_x < 0.0f) focus_x = 0.0f;
+                else if (focus_x > w - focus_sz)
+                {
+                    focus_x = w - focus_sz;
+                }
+
+                if (focus_y < 0.0f) focus_y = 0.0f;
+                else if (focus_y > h - focus_sz)
+                {
+                    focus_y = h - focus_sz;
+                }
+
+                ImGui::Text("Min: alpha=%.2f, beta=%.2f", focus_y, focus_x);
+                ImGui::Text("Max: alpha=%.2f, beta=%.2f", focus_y + focus_sz, focus_x + focus_sz);
+                ImVec2 uv0 = ImVec2((focus_x) / w, (focus_y) / h);
+                ImVec2 uv1 = ImVec2((focus_x + focus_sz) / w, (focus_y + focus_sz) / h);
+                ImGui::Image(imTex, ImVec2(128,128), uv0, uv1, ImColor(255,255,255,255), ImColor(255,255,255,128));
+                ImGui::EndTooltip();
+            }
+        }
+    }
 }
 
 void KinematicChainApplication::onRender()
@@ -305,6 +382,57 @@ bool KinematicChainApplication::checkSegmentAABBCollision(
             pmin,
             pmaxmin
         ).kind != fw::GeometricIntersectionKind::None;
+}
+
+void KinematicChainApplication::createAvailabilityMap()
+{
+    _availabilityMap.clear();
+    for (auto alphaStep = 0; alphaStep < 360; ++alphaStep)
+    {
+        float alpha = glm::radians(static_cast<float>(alphaStep));
+        for (auto betaStep = 0; betaStep < 360; ++betaStep)
+        {
+            float beta = glm::radians(static_cast<float>(betaStep));
+            _availabilityMap.push_back(checkConfiguration(alpha, beta));
+        }
+    }
+
+    createAvailabilityMapTexture();
+}
+
+void KinematicChainApplication::createAvailabilityMapTexture()
+{
+    std::vector<unsigned char> image;
+    for (const auto& state: _availabilityMap)
+    {
+        if (state)
+        {
+            image.push_back(0);
+            image.push_back(255);
+            image.push_back(0);
+        }
+        else
+        {
+            image.push_back(255);
+            image.push_back(0);
+            image.push_back(0);
+        }
+    }
+
+    glGenTextures(1, &_availabilityMapTexture);
+    glBindTexture(GL_TEXTURE_2D, _availabilityMapTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 360, 360, 0,
+        GL_RGB, GL_UNSIGNED_BYTE, image.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+bool KinematicChainApplication::checkConfiguration(float alpha, float beta)
+{
+    auto config = _armController->buildConfiguration(alpha, beta);
+    return !(checkArmConstraintCollision({0, 0}, config.first)
+        || checkArmConstraintCollision(config.first, config.second));
 }
 
 }

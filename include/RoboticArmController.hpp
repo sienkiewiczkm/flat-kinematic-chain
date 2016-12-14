@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <algorithm>
 #include "glm/glm.hpp"
 
 namespace kinematic
@@ -22,6 +23,8 @@ public:
 
     glm::vec2 getFirstArmEndPoint() const;
     glm::vec2 getSecondArmEndPoint() const;
+
+    std::pair<glm::vec2, glm::vec2> buildConfiguration(float alpha, float beta);
 
 private:
     bool solveInverseKinematics();

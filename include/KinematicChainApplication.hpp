@@ -54,6 +54,10 @@ protected:
         const fw::AABB<glm::vec2>& aabb
     ) const;
 
+    void createAvailabilityMap();
+    void createAvailabilityMapTexture();
+    bool checkConfiguration(float alpha, float beta);
+
 private:
     std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
     std::shared_ptr<fw::Mesh<fw::StandardVertex2D>> _quadGeometry;
@@ -62,12 +66,19 @@ private:
     std::shared_ptr<RoboticArmController> _armController;
     std::shared_ptr<RoboticArmRendering> _armRendering;
 
+    GLuint _texturePreview;
+
+    bool _availabilityMapCreated;
+    GLuint _availabilityMapTexture;
+
     bool _isConstraintGrabbed;
     bool _lmbDown;
     glm::vec2 _previousGrabWorldPosition;
 
     int _selectedConstraint;
     std::vector<fw::AABB<glm::vec2>> _constraints;
+
+    std::vector<bool> _availabilityMap;
 };
 
 }
