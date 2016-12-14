@@ -11,6 +11,7 @@
 #include "fw/Common.hpp"
 #include "fw/DebugShapes.hpp"
 #include "fw/Resources.hpp"
+#include "fw/GeometricIntersections.hpp"
 
 namespace kinematic
 {
@@ -55,6 +56,16 @@ void KinematicChainApplication::onUpdate(
 {
     ImGuiApplication::onUpdate(deltaTime);
     _armController->update(deltaTime);
+
+    glm::vec2 p0{0,0};
+    glm::vec2 p1 = _armController->getFirstArmEndPoint();
+    glm::vec2 p2 = _armController->getSecondArmEndPoint();
+
+    if (checkArmConstraintCollision(p0, p1)
+        || checkArmConstraintCollision(p1, p2))
+    {
+        ImGui::TextColored(ImVec4{1.0f, 0, 0, 1.0f}, "Collision!");
+    }
 
     if (ImGui::CollapsingHeader("Constraints"))
     {
@@ -235,6 +246,65 @@ void KinematicChainApplication::grabConstraint()
             break;
         }
     }
+}
+
+bool KinematicChainApplication::checkArmConstraintCollision(
+    glm::vec2 start,
+    glm::vec2 end
+) const
+{
+    for (const auto& constraint: _constraints)
+    {
+        if (checkSegmentAABBCollision(start, end, constraint))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool KinematicChainApplication::checkSegmentAABBCollision(
+    const glm::vec2& start,
+    const glm::vec2& end,
+    const fw::AABB<glm::vec2>& aabb
+) const
+{
+    if (aabb.contains(start) || aabb.contains(end))
+    {
+        return true;
+    }
+
+    auto pmin = aabb.min;
+    auto pmax = aabb.max;
+    glm::vec2 pminmax{pmin.x, pmax.y};
+    glm::vec2 pmaxmin{pmax.x, pmin.y};
+
+    return
+        fw::intersectSegments<glm::vec2, float>(
+            start,
+            end,
+            pmin,
+            pmaxmin
+        ).kind != fw::GeometricIntersectionKind::None
+        || fw::intersectSegments<glm::vec2, float>(
+            start,
+            end,
+            pmin,
+            pminmax
+        ).kind != fw::GeometricIntersectionKind::None
+        || fw::intersectSegments<glm::vec2, float>(
+            start,
+            end,
+            pmax,
+            pminmax
+        ).kind != fw::GeometricIntersectionKind::None
+        || fw::intersectSegments<glm::vec2, float>(
+            start,
+            end,
+            pmin,
+            pmaxmin
+        ).kind != fw::GeometricIntersectionKind::None;
 }
 
 }

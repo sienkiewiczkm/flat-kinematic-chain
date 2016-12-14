@@ -46,6 +46,14 @@ protected:
     glm::mat4 getProjection() const;
     void grabConstraint();
 
+    bool checkArmConstraintCollision(glm::vec2 start, glm::vec2 end) const;
+
+    bool checkSegmentAABBCollision(
+        const glm::vec2& start,
+        const glm::vec2& end,
+        const fw::AABB<glm::vec2>& aabb
+    ) const;
+
 private:
     std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
     std::shared_ptr<fw::Mesh<fw::StandardVertex2D>> _quadGeometry;
@@ -55,8 +63,9 @@ private:
     std::shared_ptr<RoboticArmRendering> _armRendering;
 
     bool _isConstraintGrabbed;
-    glm::vec2 _previousGrabWorldPosition;
     bool _lmbDown;
+    glm::vec2 _previousGrabWorldPosition;
+
     int _selectedConstraint;
     std::vector<fw::AABB<glm::vec2>> _constraints;
 };

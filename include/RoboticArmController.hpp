@@ -20,6 +20,9 @@ public:
     float getFirstArmLength() const;
     float getSecondArmLenght() const;
 
+    glm::vec2 getFirstArmEndPoint() const;
+    glm::vec2 getSecondArmEndPoint() const;
+
 private:
     bool solveInverseKinematics();
 

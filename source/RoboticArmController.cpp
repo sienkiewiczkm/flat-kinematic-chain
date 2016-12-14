@@ -125,4 +125,28 @@ float RoboticArmController::getSecondArmLenght() const
     return _secondArmLength;
 }
 
+glm::vec2 RoboticArmController::getFirstArmEndPoint() const
+{
+    glm::vec2 p0{0.0f, 0.0f};
+
+    glm::vec2 p1 = p0 + glm::vec2{
+        _firstArmLength * cosf(_alphaAngle),
+        _firstArmLength * sinf(_alphaAngle)
+    };
+
+    return p1;
+}
+
+glm::vec2 RoboticArmController::getSecondArmEndPoint() const
+{
+    auto p1 = getFirstArmEndPoint();
+
+    glm::vec2 p2 = p1 + glm::vec2{
+        _secondArmLength * cosf(_alphaAngle + _betaAngle),
+        _secondArmLength * sinf(_alphaAngle + _betaAngle)
+    };
+
+    return p2;
+}
+
 }
