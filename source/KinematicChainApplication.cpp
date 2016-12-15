@@ -1,6 +1,7 @@
 #include "KinematicChainApplication.hpp"
 
 #include <iostream>
+#include <queue>
 
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
@@ -17,6 +18,7 @@ namespace kinematic
 {
 
 KinematicChainApplication::KinematicChainApplication():
+    _searchMapAvailable{false},
     _selectedConstraint{-1},
     _isConstraintGrabbed{false}
 {
@@ -132,7 +134,7 @@ void KinematicChainApplication::onUpdate(
 
             glBindTexture(GL_TEXTURE_2D, 0);
 
-            showTexturePreview(w, h);
+            showTexturePreview(_availabilityMapTexture, w, h);
         }
     }
 
@@ -175,7 +177,10 @@ void KinematicChainApplication::onUpdate(
 
         if (_availabilityMapCreated)
         {
-            ImGui::Button("Find path");
+            if (ImGui::Button("Find path"))
+            {
+                findPath();
+            }
         }
         else
         {
@@ -183,6 +188,32 @@ void KinematicChainApplication::onUpdate(
                 {1.0f, 0.0f, 0.0f, 1.0f},
                 "Path cannot be found without configuration space generated."
             );
+        }
+
+        if (_searchMapAvailable)
+        {
+            int w, h;
+            int miplevel = 0;
+
+            glBindTexture(GL_TEXTURE_2D, _searchMapTexture);
+
+            glGetTexLevelParameteriv(
+                GL_TEXTURE_2D,
+                miplevel,
+                GL_TEXTURE_WIDTH,
+                &w
+            );
+
+            glGetTexLevelParameteriv(
+                GL_TEXTURE_2D,
+                miplevel,
+                GL_TEXTURE_HEIGHT,
+                &h
+            );
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+            showTexturePreview(_searchMapTexture, w, h);
         }
     }
 }
@@ -484,13 +515,14 @@ void KinematicChainApplication::drawQuad(
 }
 
 void KinematicChainApplication::showTexturePreview(
+    GLuint texture,
     int w,
     int h
 )
 {
     auto availX = ImGui::GetContentRegionAvailWidth();
     float scale = std::min(1.0f, availX / w);
-    void* imTex = (void*)_availabilityMapTexture;
+    void* imTex = (void*)texture;
     ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
     ImGui::Text("%dx%d", w, h);
     ImGui::Image(
@@ -550,6 +582,115 @@ void KinematicChainApplication::showTexturePreview(
 
         ImGui::EndTooltip();
     }
+}
+
+glm::ivec2 KinematicChainApplication::getClosestInConfiguration(
+    glm::vec2 coord
+)
+{
+    auto degrees = glm::degrees(coord);
+    glm::vec2 clamped{
+        static_cast<int>(std::round(degrees.x)) % 360,
+        static_cast<int>(std::round(degrees.y)) % 360
+    };
+
+    if (clamped.x < 0) { clamped.x += 360; }
+    if (clamped.y < 0) { clamped.y += 360; }
+
+    return clamped;
+}
+
+void KinematicChainApplication::findPath()
+{
+    auto startDeg = getClosestInConfiguration(_startConfiguration);
+    auto endDeg = getClosestInConfiguration(_endConfiguration);
+
+    const int cSearchMapMax = 360 * 360 + 1;
+    _searchMap.resize(360*360);
+    std::fill(std::begin(_searchMap), std::end(_searchMap), cSearchMapMax);
+
+    _searchMapTraceback.resize(360*360);
+    for (auto& el: _searchMapTraceback)
+    {
+        el = glm::ivec2{-1, -1};
+    }
+
+    std::queue<glm::ivec2> coordQueue;
+    coordQueue.push(startDeg);
+    markSearchMap(startDeg, 0);
+
+    const int dirx[] = {-1, 0, +1, 0};
+    const int diry[] = {0, -1, 0, +1};
+
+    bool found = false;
+    while (!coordQueue.empty())
+    {
+        auto current = coordQueue.front();
+        coordQueue.pop();
+
+        if (current == endDeg)
+        {
+            found = true;
+            break;
+        }
+
+        int nextDist = getSearchMapValue(current) + 1;
+
+        for (auto i = 0; i < 4; ++i)
+        {
+            glm::ivec2 next{current.x + dirx[i], current.y + diry[i]};
+            if (next.x < 0) { next.x += 360; }
+            if (next.y < 0) { next.y += 360; }
+
+            if (!verifyAvailability(next)) { continue; }
+
+            auto nextCurrentValue = getSearchMapValue(next);
+
+            if (nextCurrentValue > nextDist)
+            {
+                auto index = 360 * next.x + next.y;
+                _searchMapTraceback[index] = current;
+                markSearchMap(next, nextDist);
+                coordQueue.push(next);
+            }
+        }
+    }
+
+    std::vector<unsigned char> image;
+    for (const auto& state: _searchMap)
+    {
+        auto gradient = std::min(255, state);
+        image.push_back(gradient);
+        image.push_back(gradient);
+        image.push_back(gradient);
+    }
+
+    _searchMapAvailable = true;
+    glGenTextures(1, &_searchMapTexture);
+    glBindTexture(GL_TEXTURE_2D, _searchMapTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 360, 360, 0,
+        GL_RGB, GL_UNSIGNED_BYTE, image.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void KinematicChainApplication::markSearchMap(glm::ivec2 coord, int value)
+{
+    auto index = 360 * coord.x + coord.y;
+    _searchMap[index] = value;
+}
+
+int KinematicChainApplication::getSearchMapValue(glm::ivec2 coord)
+{
+    auto index = 360 * coord.x + coord.y;
+    return _searchMap[index];
+}
+
+bool KinematicChainApplication::verifyAvailability(glm::ivec2 coord)
+{
+    auto index = 360 * coord.x + coord.y;
+    return _availabilityMap[index];
 }
 
 }

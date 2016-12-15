@@ -67,7 +67,13 @@ private:
         const glm::vec3& color
     );
 
-    void showTexturePreview(int w, int h);
+    void showTexturePreview(GLuint texture, int w, int h);
+
+    glm::ivec2 getClosestInConfiguration(glm::vec2 coord);
+    void markSearchMap(glm::ivec2 coord, int value);
+    int getSearchMapValue(glm::ivec2 coord);
+    bool verifyAvailability(glm::ivec2 coord);
+    void findPath();
 
     std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
     std::shared_ptr<fw::Mesh<fw::StandardVertex2D>> _quadGeometry;
@@ -81,6 +87,9 @@ private:
     bool _availabilityMapCreated;
     GLuint _availabilityMapTexture;
 
+    bool _searchMapAvailable;
+    GLuint _searchMapTexture;
+
     bool _isConstraintGrabbed;
     glm::vec2 _previousGrabWorldPosition;
 
@@ -91,6 +100,8 @@ private:
     std::vector<fw::AABB<glm::vec2>> _constraints;
 
     std::vector<bool> _availabilityMap;
+    std::vector<int> _searchMap;
+    std::vector<glm::ivec2> _searchMapTraceback;
 };
 
 }
