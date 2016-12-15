@@ -4,3 +4,4 @@ Flat Kinematic Chain application is university project. You can find more detail
 
 If you intend to read source code: be aware that it is only prototype and code quality is poor.
 
+![Commit 2bd3a92 state](docs/screenshot-2bd3a92.png)
