@@ -58,6 +58,8 @@ protected:
     void createAvailabilityMapTexture();
     bool checkConfiguration(float alpha, float beta);
 
+    std::vector<std::pair<float, float>> getValidSolutions();
+
 private:
     void drawQuad(
         const glm::vec2& position,

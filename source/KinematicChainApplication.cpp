@@ -137,7 +137,7 @@ void KinematicChainApplication::onRender()
     glm::vec3 secondaryColor{0.3f, 0.3f, 0.3f};
     _standard2DEffect->setEmissionColor(primaryColor);
 
-    auto solutions = _armController->getSolutions();
+    auto solutions = getValidSolutions();
     for (auto it = solutions.rbegin(); it != solutions.rend(); ++it)
     {
         const auto& solution = *it;
@@ -375,6 +375,20 @@ void KinematicChainApplication::createAvailabilityMapTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 360, 360, 0,
         GL_RGB, GL_UNSIGNED_BYTE, image.data());
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+std::vector<std::pair<float, float>>
+    KinematicChainApplication::getValidSolutions()
+{
+    std::vector<std::pair<float, float>> output;
+    for (const auto& solution: _armController->getSolutions())
+    {
+        if (checkConfiguration(solution.first, solution.second))
+        {
+            output.push_back(solution);
+        }
+    }
+    return output;
 }
 
 bool KinematicChainApplication::checkConfiguration(float alpha, float beta)
