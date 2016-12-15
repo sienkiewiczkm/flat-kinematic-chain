@@ -27,8 +27,6 @@ public:
     glm::vec2 getTarget() const { return _ikTarget; }
 
     std::pair<glm::vec2, glm::vec2> buildConfiguration(float alpha, float beta);
-
-private:
     bool solveInverseKinematics();
 
 private:

@@ -133,25 +133,33 @@ void KinematicChainApplication::onRender()
 
     auto projection = getProjection();
 
-    _armRendering->setFirstArmLength(_armController->getFirstArmLength());
-    _armRendering->setSecondArmLength(_armController->getSecondArmLength());
-    _armRendering->setArmsThickness(_armController->getVisualThickness());
-    _armRendering->setAlphaAngle(_armController->getSolutions()[0].first);
-    _armRendering->setBetaAngle(_armController->getSolutions()[0].second);
-
     glm::vec3 primaryColor{0.0f, 1.0f, 1.0f};
     glm::vec3 secondaryColor{0.3f, 0.3f, 0.3f};
+    _standard2DEffect->setEmissionColor(primaryColor);
 
-    for (const auto& chunk: _armRendering->render())
+    auto solutions = _armController->getSolutions();
+    for (auto it = solutions.rbegin(); it != solutions.rend(); ++it)
     {
-        _standard2DEffect->setEmissionColor(primaryColor);
-        _standard2DEffect->setModelMatrix(chunk.getModelMatrix());
-        _standard2DEffect->setViewMatrix({});
-        _standard2DEffect->setProjectionMatrix(projection);
-        _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
-        _standard2DEffect->begin();
-        chunk.getMesh()->render();
-        _standard2DEffect->end();
+        const auto& solution = *it;
+
+        _armRendering->setFirstArmLength(_armController->getFirstArmLength());
+        _armRendering->setSecondArmLength(_armController->getSecondArmLength());
+        _armRendering->setArmsThickness(_armController->getVisualThickness());
+        _armRendering->setAlphaAngle(solution.first);
+        _armRendering->setBetaAngle(solution.second);
+
+        for (const auto& chunk: _armRendering->render())
+        {
+            _standard2DEffect->setModelMatrix(chunk.getModelMatrix());
+            _standard2DEffect->setViewMatrix({});
+            _standard2DEffect->setProjectionMatrix(projection);
+            _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
+            _standard2DEffect->begin();
+            chunk.getMesh()->render();
+            _standard2DEffect->end();
+        }
+
+        _standard2DEffect->setEmissionColor(secondaryColor);
     }
 
     for (const auto& constraint: _constraints)
@@ -181,6 +189,7 @@ bool KinematicChainApplication::onMouseButton(int button, int action, int mods)
                 );
 
                 _armController->setTarget(worldPos);
+                _armController->solveInverseKinematics();
             }
         }
         else

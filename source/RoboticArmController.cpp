@@ -101,14 +101,18 @@ bool RoboticArmController::solveInverseKinematics()
         return false;
     }
 
-    auto alphaAngle = atan2f(intersections[0].y, intersections[0].x);
-    auto betaAngle = atan2f(
-        _ikTarget.y - intersections[0].y,
-        _ikTarget.x - intersections[0].x
-    ) - alphaAngle;
-
     _solutions.clear();
-    _solutions.push_back({alphaAngle, betaAngle});
+    for (auto i = 0; i < intersections.size(); ++i)
+    {
+        auto alphaAngle = atan2f(intersections[i].y, intersections[i].x);
+        auto betaAngle = atan2f(
+            _ikTarget.y - intersections[i].y,
+            _ikTarget.x - intersections[i].x
+        ) - alphaAngle;
+
+        _solutions.push_back({alphaAngle, betaAngle});
+    }
+
     return true;
 }
 
