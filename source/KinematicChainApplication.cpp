@@ -139,8 +139,12 @@ void KinematicChainApplication::onRender()
     _armRendering->setAlphaAngle(_armController->getSolutions()[0].first);
     _armRendering->setBetaAngle(_armController->getSolutions()[0].second);
 
+    glm::vec3 primaryColor{0.0f, 1.0f, 1.0f};
+    glm::vec3 secondaryColor{0.3f, 0.3f, 0.3f};
+
     for (const auto& chunk: _armRendering->render())
     {
+        _standard2DEffect->setEmissionColor(primaryColor);
         _standard2DEffect->setModelMatrix(chunk.getModelMatrix());
         _standard2DEffect->setViewMatrix({});
         _standard2DEffect->setProjectionMatrix(projection);
@@ -154,10 +158,10 @@ void KinematicChainApplication::onRender()
     {
         glm::vec2 position = (constraint.min + constraint.max) / 2.0f;
         glm::vec2 size = constraint.max - constraint.min;
-        drawQuad(position, size, {1.0f, 1.0f, 1.0f});
+        drawQuad(position, size, {1.0f, 0.3f, 0.3f});
     }
 
-    drawQuad(_armController->getTarget(), {0.01, 0.01}, {1.0f, 1.0f, 1.0f});
+    drawQuad(_armController->getTarget(), {0.01, 0.01}, {0.0f, 1.0f, 0.0f});
 
     ImGuiApplication::onRender();
 }
@@ -377,6 +381,7 @@ void KinematicChainApplication::drawQuad(
     const glm::vec3& color
 )
 {
+    _standard2DEffect->setEmissionColor(color);
     _standard2DEffect->setViewMatrix({});
     _standard2DEffect->setModelMatrix(glm::scale(
         glm::translate(
