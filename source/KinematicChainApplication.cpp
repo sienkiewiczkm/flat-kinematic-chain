@@ -241,7 +241,7 @@ void KinematicChainApplication::onUpdate(
         }
     }
 
-    if (ImGui::CollapsingHeader("Animation"))
+    if (_configurationPath.size() > 0 && ImGui::CollapsingHeader("Animation"))
     {
         ImGui::SliderFloat("Time per frame", &_frameTime, 0.05f, 2.0f);
 
