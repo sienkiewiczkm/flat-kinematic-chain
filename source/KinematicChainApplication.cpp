@@ -7,6 +7,7 @@
 #include "glm/gtc/type_ptr.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/string_cast.hpp"
+#include "glm/gtx/color_space.hpp"
 #include "imgui.h"
 
 #include "fw/Common.hpp"
@@ -20,7 +21,11 @@ namespace kinematic
 KinematicChainApplication::KinematicChainApplication():
     _searchMapAvailable{false},
     _selectedConstraint{-1},
-    _isConstraintGrabbed{false}
+    _isConstraintGrabbed{false},
+    _frameTime{0.25f},
+    _animationEnabled{false},
+    _frameAnimationPassed{0.0f},
+    _currentAnimationStep{0}
 {
 }
 
@@ -216,6 +221,47 @@ void KinematicChainApplication::onUpdate(
             showTexturePreview(_searchMapTexture, w, h);
         }
     }
+
+    if (_animationEnabled)
+    {
+        _frameAnimationPassed +=
+            std::chrono::duration<float>(deltaTime).count();
+
+        while (_frameAnimationPassed > _frameTime)
+        {
+            ++_currentAnimationStep;
+            _frameAnimationPassed -= _frameTime;
+        }
+
+        if (_currentAnimationStep + 1 >= _configurationPath.size())
+        {
+            _animationEnabled = false;
+            _currentAnimationStep = 0;
+            _frameAnimationPassed = 0.0f;
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Animation"))
+    {
+        ImGui::SliderFloat("Time per frame", &_frameTime, 0.05f, 2.0f);
+
+        if (_currentAnimationStep > 0 && ImGui::Button("Restart"))
+        {
+            _currentAnimationStep = 0;
+            _frameAnimationPassed = 0.0f;
+        }
+
+        if (!_animationEnabled && ImGui::Button("Play"))
+        {
+            if (_currentAnimationStep >= _configurationPath.size())
+                _currentAnimationStep = 0;
+            _animationEnabled = true;
+        }
+        else if (_animationEnabled && ImGui::Button("Stop"))
+        {
+            _animationEnabled = false;
+        }
+    }
 }
 
 void KinematicChainApplication::onRender()
@@ -227,9 +273,20 @@ void KinematicChainApplication::onRender()
 
     glm::vec3 primaryColor{0.0f, 1.0f, 1.0f};
     glm::vec3 secondaryColor{0.3f, 0.3f, 0.3f};
-    _standard2DEffect->setEmissionColor(primaryColor);
+
 
     auto solutions = getValidSolutions();
+
+    if (solutions.size() > 1)
+    {
+        _standard2DEffect->setEmissionColor(secondaryColor);
+    }
+    else
+    {
+        _standard2DEffect->setEmissionColor(primaryColor);
+    }
+
+
     for (auto it = solutions.rbegin(); it != solutions.rend(); ++it)
     {
         const auto& solution = *it;
@@ -251,7 +308,7 @@ void KinematicChainApplication::onRender()
             _standard2DEffect->end();
         }
 
-        _standard2DEffect->setEmissionColor(secondaryColor);
+        _standard2DEffect->setEmissionColor(primaryColor);
     }
 
     for (const auto& constraint: _constraints)
@@ -485,6 +542,21 @@ void KinematicChainApplication::createAvailabilityMapTexture()
 std::vector<std::pair<float, float>>
     KinematicChainApplication::getValidSolutions()
 {
+    if (_animationEnabled)
+    {
+        auto from = glm::vec2{_configurationPath[_currentAnimationStep]};
+        auto to = glm::vec2{_configurationPath[_currentAnimationStep + 1]};
+
+        float t = std::min(1.0f, _frameAnimationPassed / _frameTime);
+        auto mixed = glm::vec2{
+            mixDegrees(from.x, to.x, t),
+            mixDegrees(from.y, to.y, t),
+        };
+
+        mixed = glm::radians(mixed);
+        return {{mixed.x, mixed.y}};
+    }
+
     std::vector<std::pair<float, float>> output;
     for (const auto& solution: _armController->getSolutions())
     {
@@ -494,6 +566,26 @@ std::vector<std::pair<float, float>>
         }
     }
     return output;
+}
+
+float KinematicChainApplication::mixDegrees(float a, float b, float m)
+{
+    auto lengthDirect = std::abs(b - a);
+    auto lengthAround = std::min(a, b) + (360.0f - std::max(a, b));
+
+    if (lengthDirect < lengthAround)
+    {
+        return glm::mix(a, b, m);
+    }
+
+    if (a < b)
+    {
+        return glm::mix(a, b - 360.0f, m);
+    }
+    else
+    {
+        return glm::mix(a, b + 360.0f, m);
+    }
 }
 
 bool KinematicChainApplication::checkConfiguration(float alpha, float beta)
@@ -634,6 +726,7 @@ void KinematicChainApplication::findPath()
     const int diry[] = {0, -1, 0, +1};
 
     bool found = false;
+    int maxDist = 0;
     while (!coordQueue.empty())
     {
         auto current = coordQueue.front();
@@ -646,6 +739,7 @@ void KinematicChainApplication::findPath()
         }
 
         int nextDist = getSearchMapValue(current) + 1;
+        maxDist = std::max(maxDist, nextDist);
 
         for (auto i = 0; i < 4; ++i)
         {
@@ -671,30 +765,76 @@ void KinematicChainApplication::findPath()
         }
     }
 
-    std::vector<unsigned char> image;
-    for (const auto& state: _searchMap)
-    {
-        auto gradient = std::min(255, state);
-        image.push_back(gradient);
-        image.push_back(gradient);
-        image.push_back(gradient);
-    }
-
-    _searchMapAvailable = true;
-    glGenTextures(1, &_searchMapTexture);
-    glBindTexture(GL_TEXTURE_2D, _searchMapTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 360, 360, 0,
-        GL_RGB, GL_UNSIGNED_BYTE, image.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
-
     _configurationPath.clear();
 
     if (found)
     {
         trackbackAndStorePath(endDeg);
+        _animationEnabled = false;
+        _currentAnimationStep = 0;
+        _frameAnimationPassed = 0.0f;
     }
+
+    for (auto &pathStep: _configurationPath)
+    {
+        markSearchMap(pathStep, -2);
+    }
+
+    markSearchMap(startDeg, -1);
+    markSearchMap(endDeg, -1);
+
+    std::vector<unsigned char> image;
+    for (const auto& state: _searchMap)
+    {
+        if (state == cSearchMapMax)
+        {
+            image.push_back(0);
+            image.push_back(0);
+            image.push_back(0);
+            continue;
+        }
+
+        if (state == -1)
+        {
+            image.push_back(255);
+            image.push_back(0);
+            image.push_back(255);
+            continue;
+        }
+
+        if (state == -2)
+        {
+            image.push_back(255);
+            image.push_back(255);
+            image.push_back(255);
+            continue;
+        }
+
+        auto gradient = std::min(1.0f, static_cast<float>(state) / maxDist);
+        int hue = static_cast<int>(260 * gradient);
+        auto color = glm::rgbColor(glm::vec3{hue, 1.0f, 1.0f});
+
+        image.push_back(
+            static_cast<unsigned char>(std::min(255.0f, 255 * color.x))
+        );
+
+        image.push_back(
+            static_cast<unsigned char>(std::min(255.0f, 255 * color.y))
+        );
+
+        image.push_back(
+            static_cast<unsigned char>(std::min(255.0f, 255 * color.z))
+        );
+    }
+
+    _searchMapAvailable = true;
+    glGenTextures(1, &_searchMapTexture);
+    glBindTexture(GL_TEXTURE_2D, _searchMapTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 360, 360, 0,
+        GL_RGB, GL_UNSIGNED_BYTE, image.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void KinematicChainApplication::markSearchMap(glm::ivec2 coord, int value)

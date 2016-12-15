@@ -78,6 +78,8 @@ private:
     void trackbackAndStorePath(glm::ivec2 end);
     void updatePolygonalLine();
 
+    float mixDegrees(float a, float b, float m);
+
     std::shared_ptr<fw::PolygonalLine> _line;
 
     std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
@@ -88,6 +90,11 @@ private:
     std::shared_ptr<RoboticArmRendering> _armRendering;
 
     GLuint _texturePreview;
+
+    bool _animationEnabled;
+    float _frameAnimationPassed;
+    float _frameTime;
+    int _currentAnimationStep;
 
     bool _availabilityMapCreated;
     GLuint _availabilityMapTexture;
