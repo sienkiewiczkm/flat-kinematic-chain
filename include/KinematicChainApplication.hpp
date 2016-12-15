@@ -59,6 +59,14 @@ protected:
     bool checkConfiguration(float alpha, float beta);
 
 private:
+    void drawQuad(
+        const glm::vec2& position,
+        const glm::vec2& size,
+        const glm::vec3& color
+    );
+
+    void showTexturePreview(int w, int h);
+
     std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
     std::shared_ptr<fw::Mesh<fw::StandardVertex2D>> _quadGeometry;
     std::shared_ptr<fw::Texture> _testTexture;
@@ -72,7 +80,6 @@ private:
     GLuint _availabilityMapTexture;
 
     bool _isConstraintGrabbed;
-    bool _lmbDown;
     glm::vec2 _previousGrabWorldPosition;
 
     int _selectedConstraint;

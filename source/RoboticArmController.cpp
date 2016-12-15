@@ -10,10 +10,9 @@ RoboticArmController::RoboticArmController():
     _firstArmLength{0.3f},
     _secondArmLength{0.3f},
     _thickness{0.01f},
-    _alphaAngle{},
-    _betaAngle{},
     _lastSolveResult{true}
 {
+    _solutions.push_back({0, 0});
 }
 
 RoboticArmController::~RoboticArmController()
@@ -48,8 +47,8 @@ void RoboticArmController::update(
 
     if (ImGui::CollapsingHeader("Forward kinematics"))
     {
-        ImGui::DragFloat("Alpha (rad)", &_alphaAngle, 0.01f);
-        ImGui::DragFloat("Beta (rad)", &_betaAngle, 0.01f);
+        ImGui::DragFloat("Alpha (rad)", &_solutions[0].first, 0.01f);
+        ImGui::DragFloat("Beta (rad)", &_solutions[0].second, 0.01f);
     }
 
     if (ImGui::CollapsingHeader("Inverse kinematics"))
@@ -82,14 +81,10 @@ float RoboticArmController::getVisualThickness() const
     return _thickness;
 }
 
-float RoboticArmController::getArmAlphaAngle() const
+const std::vector<std::pair<float, float>>& RoboticArmController::getSolutions(
+) const
 {
-    return _alphaAngle;
-}
-
-float RoboticArmController::getArmBetaAngle() const
-{
-    return _betaAngle;
+    return _solutions;
 }
 
 bool RoboticArmController::solveInverseKinematics()
@@ -106,12 +101,14 @@ bool RoboticArmController::solveInverseKinematics()
         return false;
     }
 
-    _alphaAngle = atan2f(intersections[0].y, intersections[0].x);
-    _betaAngle = atan2f(
+    auto alphaAngle = atan2f(intersections[0].y, intersections[0].x);
+    auto betaAngle = atan2f(
         _ikTarget.y - intersections[0].y,
         _ikTarget.x - intersections[0].x
-    ) - _alphaAngle;
+    ) - alphaAngle;
 
+    _solutions.clear();
+    _solutions.push_back({alphaAngle, betaAngle});
     return true;
 }
 
@@ -120,43 +117,14 @@ float RoboticArmController::getFirstArmLength() const
     return _firstArmLength;
 }
 
-float RoboticArmController::getSecondArmLenght() const
+float RoboticArmController::getSecondArmLength() const
 {
     return _secondArmLength;
 }
 
-glm::vec2 RoboticArmController::getFirstArmEndPoint() const
-{
-    glm::vec2 p0{0.0f, 0.0f};
-
-    glm::vec2 p1 = p0 + glm::vec2{
-        _firstArmLength * cosf(_alphaAngle),
-        _firstArmLength * sinf(_alphaAngle)
-    };
-
-    return p1;
-}
-
-glm::vec2 RoboticArmController::getSecondArmEndPoint() const
-{
-    auto p1 = getFirstArmEndPoint();
-
-    glm::vec2 p2 = p1 + glm::vec2{
-        _secondArmLength * cosf(_alphaAngle + _betaAngle),
-        _secondArmLength * sinf(_alphaAngle + _betaAngle)
-    };
-
-    return p2;
-}
-
-void RoboticArmController::setTargetFrom(const glm::vec2& position)
+void RoboticArmController::setTarget(const glm::vec2& position)
 {
     _ikTarget = position;
-}
-
-void RoboticArmController::setTargetTo(const glm::vec2& position)
-{
-    _ikSecondTarget = position;
 }
 
 std::pair<glm::vec2, glm::vec2> RoboticArmController::buildConfiguration(

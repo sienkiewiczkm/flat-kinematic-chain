@@ -18,7 +18,6 @@ namespace kinematic
 
 KinematicChainApplication::KinematicChainApplication():
     _selectedConstraint{-1},
-    _lmbDown{false},
     _isConstraintGrabbed{false}
 {
 }
@@ -56,16 +55,6 @@ void KinematicChainApplication::onUpdate(
 {
     ImGuiApplication::onUpdate(deltaTime);
     _armController->update(deltaTime);
-
-    glm::vec2 p0{0,0};
-    glm::vec2 p1 = _armController->getFirstArmEndPoint();
-    glm::vec2 p2 = _armController->getSecondArmEndPoint();
-
-    if (checkArmConstraintCollision(p0, p1)
-        || checkArmConstraintCollision(p1, p2))
-    {
-        ImGui::TextColored(ImVec4{1.0f, 0, 0, 1.0f}, "Collision!");
-    }
 
     if (ImGui::CollapsingHeader("Constraints"))
     {
@@ -132,49 +121,7 @@ void KinematicChainApplication::onUpdate(
 
             glBindTexture(GL_TEXTURE_2D, 0);
 
-            auto availX = ImGui::GetContentRegionAvailWidth();
-            float scale = std::min(1.0f, availX / w);
-
-            void* imTex = (void*)_availabilityMapTexture;
-
-            ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
-            ImGui::Text("%dx%d", w, h);
-            ImGui::Image(
-                imTex,
-                ImVec2(w*scale, h*scale),
-                ImVec2(0,0),
-                ImVec2(1,1),
-                ImColor(255,255,255,255),
-                ImColor(255,255,255,128)
-            );
-
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::BeginTooltip();
-
-                float focus_sz = 32.0f;
-                float focus_x = ImGui::GetMousePos().x - tex_screen_pos.x - focus_sz * 0.5f;
-                float focus_y = ImGui::GetMousePos().y - tex_screen_pos.y - focus_sz * 0.5f;
-
-                if (focus_x < 0.0f) focus_x = 0.0f;
-                else if (focus_x > w - focus_sz)
-                {
-                    focus_x = w - focus_sz;
-                }
-
-                if (focus_y < 0.0f) focus_y = 0.0f;
-                else if (focus_y > h - focus_sz)
-                {
-                    focus_y = h - focus_sz;
-                }
-
-                ImGui::Text("Min: alpha=%.2f, beta=%.2f", focus_y, focus_x);
-                ImGui::Text("Max: alpha=%.2f, beta=%.2f", focus_y + focus_sz, focus_x + focus_sz);
-                ImVec2 uv0 = ImVec2((focus_x) / w, (focus_y) / h);
-                ImVec2 uv1 = ImVec2((focus_x + focus_sz) / w, (focus_y + focus_sz) / h);
-                ImGui::Image(imTex, ImVec2(128,128), uv0, uv1, ImColor(255,255,255,255), ImColor(255,255,255,128));
-                ImGui::EndTooltip();
-            }
+            showTexturePreview(w, h);
         }
     }
 }
@@ -187,10 +134,10 @@ void KinematicChainApplication::onRender()
     auto projection = getProjection();
 
     _armRendering->setFirstArmLength(_armController->getFirstArmLength());
-    _armRendering->setSecondArmLength(_armController->getSecondArmLenght());
+    _armRendering->setSecondArmLength(_armController->getSecondArmLength());
     _armRendering->setArmsThickness(_armController->getVisualThickness());
-    _armRendering->setAlphaAngle(_armController->getArmAlphaAngle());
-    _armRendering->setBetaAngle(_armController->getArmBetaAngle());
+    _armRendering->setAlphaAngle(_armController->getSolutions()[0].first);
+    _armRendering->setBetaAngle(_armController->getSolutions()[0].second);
 
     for (const auto& chunk: _armRendering->render())
     {
@@ -207,53 +154,10 @@ void KinematicChainApplication::onRender()
     {
         glm::vec2 position = (constraint.min + constraint.max) / 2.0f;
         glm::vec2 size = constraint.max - constraint.min;
-
-        auto translation = glm::translate(
-            glm::mat4{},
-            glm::vec3{position, 0.0f}
-        );
-
-        auto scaling = glm::scale(
-            glm::mat4{},
-            glm::vec3{size, 1.0f}
-        );
-
-        _standard2DEffect->setModelMatrix(translation * scaling);
-        _standard2DEffect->setViewMatrix({});
-        _standard2DEffect->setProjectionMatrix(projection);
-        _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
-        _standard2DEffect->begin();
-        _quadGeometry->render();
-        _standard2DEffect->end();
+        drawQuad(position, size, {1.0f, 1.0f, 1.0f});
     }
 
-    _standard2DEffect->setViewMatrix({});
-    _standard2DEffect->setModelMatrix(glm::scale(
-        glm::translate(
-            glm::mat4{},
-            glm::vec3{_armController->getTargetFrom(), 0.0}
-        ),
-        glm::vec3{0.01, 0.01, 1.0}
-    ));
-    _standard2DEffect->setProjectionMatrix(projection);
-    _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
-    _standard2DEffect->begin();
-    _quadGeometry->render();
-    _standard2DEffect->end();
-
-    _standard2DEffect->setViewMatrix({});
-    _standard2DEffect->setModelMatrix(glm::scale(
-        glm::translate(
-            glm::mat4{},
-            glm::vec3{_armController->getTargetTo(), 0.0}
-        ),
-        glm::vec3{0.01, 0.01, 1.0}
-    ));
-    _standard2DEffect->setProjectionMatrix(projection);
-    _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
-    _standard2DEffect->begin();
-    _quadGeometry->render();
-    _standard2DEffect->end();
+    drawQuad(_armController->getTarget(), {0.01, 0.01}, {1.0f, 1.0f, 1.0f});
 
     ImGuiApplication::onRender();
 }
@@ -266,34 +170,19 @@ bool KinematicChainApplication::onMouseButton(int button, int action, int mods)
     {
         if (action == GLFW_PRESS)
         {
-            if (!_lmbDown)
+            if (!grabConstraint())
             {
-                if (!grabConstraint())
-                {
-                    glm::vec2 worldPos = getWorldCursorPos(
-                        getCurrentMousePosition()
-                    );
+                glm::vec2 worldPos = getWorldCursorPos(
+                    getCurrentMousePosition()
+                );
 
-                    _armController->setTargetFrom(worldPos);
-                }
+                _armController->setTarget(worldPos);
             }
-
-            _lmbDown = true;
         }
         else
         {
             _isConstraintGrabbed = false;
-            _lmbDown = false;
         }
-    }
-
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-    {
-        glm::vec2 worldPos = getWorldCursorPos(
-            getCurrentMousePosition()
-        );
-
-        _armController->setTargetTo(worldPos);
     }
 
     return false;
@@ -480,6 +369,96 @@ bool KinematicChainApplication::checkConfiguration(float alpha, float beta)
     auto config = _armController->buildConfiguration(alpha, beta);
     return !(checkArmConstraintCollision({0, 0}, config.first)
         || checkArmConstraintCollision(config.first, config.second));
+}
+
+void KinematicChainApplication::drawQuad(
+    const glm::vec2& position,
+    const glm::vec2& size,
+    const glm::vec3& color
+)
+{
+    _standard2DEffect->setViewMatrix({});
+    _standard2DEffect->setModelMatrix(glm::scale(
+        glm::translate(
+            glm::mat4{},
+            glm::vec3{position, 0.0}
+        ),
+        glm::vec3{size, 1.0}
+    ));
+    _standard2DEffect->setProjectionMatrix(getProjection());
+    _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
+    _standard2DEffect->begin();
+    _quadGeometry->render();
+    _standard2DEffect->end();
+}
+
+void KinematicChainApplication::showTexturePreview(
+    int w,
+    int h
+)
+{
+    auto availX = ImGui::GetContentRegionAvailWidth();
+    float scale = std::min(1.0f, availX / w);
+    void* imTex = (void*)_availabilityMapTexture;
+    ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
+    ImGui::Text("%dx%d", w, h);
+    ImGui::Image(
+        imTex,
+        ImVec2(w*scale, h*scale),
+        ImVec2(0,0),
+        ImVec2(1,1),
+        ImColor(255,255,255,255),
+        ImColor(255,255,255,128)
+    );
+
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+
+        float focus_sz = 32.0f;
+        float focus_x =
+            ImGui::GetMousePos().x - tex_screen_pos.x - focus_sz * 0.5f;
+        float focus_y =
+            ImGui::GetMousePos().y - tex_screen_pos.y - focus_sz * 0.5f;
+
+        if (focus_x < 0.0f)
+        {
+            focus_x = 0.0f;
+        }
+        else if (focus_x > w - focus_sz)
+        {
+            focus_x = w - focus_sz;
+        }
+
+        if (focus_y < 0.0f)
+        {
+            focus_y = 0.0f;
+        }
+        else if (focus_y > h - focus_sz)
+        {
+            focus_y = h - focus_sz;
+        }
+
+        ImGui::Text("Min: alpha=%.2f, beta=%.2f", focus_y, focus_x);
+        ImGui::Text(
+            "Max: alpha=%.2f, beta=%.2f",
+            focus_y + focus_sz,
+            focus_x + focus_sz
+        );
+
+        ImVec2 uv0{(focus_x) / w, (focus_y) / h};
+        ImVec2 uv1{(focus_x + focus_sz) / w, (focus_y + focus_sz) / h};
+        ImGui::Image(
+            imTex,
+            ImVec2(128,128),
+            uv0,
+            uv1,
+            ImColor(255,255,255,255),
+            ImColor(255,255,255,128)
+        );
+
+        ImGui::EndTooltip();
+    }
 }
 
 }
