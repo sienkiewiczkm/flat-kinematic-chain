@@ -263,6 +263,17 @@ void KinematicChainApplication::onRender()
 
     drawQuad(_armController->getTarget(), {0.01, 0.01}, {0.0f, 1.0f, 0.0f});
 
+    if (_line != nullptr)
+    {
+        _standard2DEffect->setEmissionColor({0.3f, 1.0f, 1.0f});
+        _standard2DEffect->setModelMatrix({});
+        _standard2DEffect->setViewMatrix({});
+        _standard2DEffect->setProjectionMatrix(projection);
+        _standard2DEffect->begin();
+        _line->render();
+        _standard2DEffect->end();
+    }
+
     ImGuiApplication::onRender();
 }
 
@@ -638,7 +649,11 @@ void KinematicChainApplication::findPath()
 
         for (auto i = 0; i < 4; ++i)
         {
-            glm::ivec2 next{current.x + dirx[i], current.y + diry[i]};
+            glm::ivec2 next{
+                (current.x + dirx[i]) % 360,
+                (current.y + diry[i]) % 360
+            };
+
             if (next.x < 0) { next.x += 360; }
             if (next.y < 0) { next.y += 360; }
 
@@ -673,6 +688,13 @@ void KinematicChainApplication::findPath()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 360, 360, 0,
         GL_RGB, GL_UNSIGNED_BYTE, image.data());
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    _configurationPath.clear();
+
+    if (found)
+    {
+        trackbackAndStorePath(endDeg);
+    }
 }
 
 void KinematicChainApplication::markSearchMap(glm::ivec2 coord, int value)
@@ -691,6 +713,46 @@ bool KinematicChainApplication::verifyAvailability(glm::ivec2 coord)
 {
     auto index = 360 * coord.x + coord.y;
     return _availabilityMap[index];
+}
+
+void KinematicChainApplication::trackbackAndStorePath(glm::ivec2 end)
+{
+    std::vector<glm::ivec2> newPath;
+    auto current = end;
+    while (current != glm::ivec2{-1, -1})
+    {
+        newPath.push_back(current);
+        auto index = 360 * current.x + current.y;
+        current = _searchMapTraceback[index];
+    }
+
+    _configurationPath.clear();
+    std::reverse_copy(
+        std::begin(newPath),
+        std::end(newPath),
+        std::back_inserter(_configurationPath)
+    );
+
+    updatePolygonalLine();
+}
+
+void KinematicChainApplication::updatePolygonalLine()
+{
+    std::vector<fw::VertexColor> vertices;
+    for (const auto& pos: _configurationPath)
+    {
+        auto config = _armController->buildConfiguration(
+            glm::radians(static_cast<float>(pos.x)),
+            glm::radians(static_cast<float>(pos.y))
+        );
+
+        vertices.push_back({
+            {config.second, 0.0f},
+            {1.0f, 1.0f, 1.0f}
+        });
+    }
+
+    _line = std::make_shared<fw::PolygonalLine>(vertices);
 }
 
 }

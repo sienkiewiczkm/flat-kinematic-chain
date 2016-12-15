@@ -14,6 +14,7 @@
 #include "fw/TexturedPhongEffect.hpp"
 #include "fw/UniversalPhongEffect.hpp"
 #include "fw/Vertices.hpp"
+#include "fw/PolygonalLine.hpp"
 #include "fw/effects/Standard2DEffect.hpp"
 
 #include "RoboticArmController.hpp"
@@ -74,6 +75,10 @@ private:
     int getSearchMapValue(glm::ivec2 coord);
     bool verifyAvailability(glm::ivec2 coord);
     void findPath();
+    void trackbackAndStorePath(glm::ivec2 end);
+    void updatePolygonalLine();
+
+    std::shared_ptr<fw::PolygonalLine> _line;
 
     std::shared_ptr<fw::Standard2DEffect> _standard2DEffect;
     std::shared_ptr<fw::Mesh<fw::StandardVertex2D>> _quadGeometry;
@@ -89,6 +94,7 @@ private:
 
     bool _searchMapAvailable;
     GLuint _searchMapTexture;
+    std::vector<glm::ivec2> _configurationPath;
 
     bool _isConstraintGrabbed;
     glm::vec2 _previousGrabWorldPosition;
