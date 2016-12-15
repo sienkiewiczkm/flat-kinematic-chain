@@ -84,6 +84,9 @@ private:
     bool _isConstraintGrabbed;
     glm::vec2 _previousGrabWorldPosition;
 
+    glm::vec2 _startConfiguration;
+    glm::vec2 _endConfiguration;
+
     int _selectedConstraint;
     std::vector<fw::AABB<glm::vec2>> _constraints;
 

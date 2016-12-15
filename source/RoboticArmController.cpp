@@ -59,6 +59,11 @@ void RoboticArmController::update(
             _lastSolveResult = solveInverseKinematics();
         }
 
+        if (ImGui::Button("Swap solutions"))
+        {
+            swapSolutions();
+        }
+
         if (!_lastSolveResult)
         {
             ImGui::TextColored(
@@ -149,6 +154,14 @@ std::pair<glm::vec2, glm::vec2> RoboticArmController::buildConfiguration(
     };
 
     return {p1, p2};
+}
+
+void RoboticArmController::swapSolutions()
+{
+    if (_solutions.size() > 1)
+    {
+        std::swap(_solutions[0], _solutions[1]);
+    }
 }
 
 }

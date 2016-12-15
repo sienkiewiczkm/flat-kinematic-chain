@@ -29,6 +29,8 @@ public:
     std::pair<glm::vec2, glm::vec2> buildConfiguration(float alpha, float beta);
     bool solveInverseKinematics();
 
+    void swapSolutions();
+
 private:
     glm::vec2 _ikTarget;
     glm::vec2 _ikSecondTarget;

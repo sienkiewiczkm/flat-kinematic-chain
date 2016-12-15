@@ -66,6 +66,8 @@ void KinematicChainApplication::onUpdate(
                 {-0.5f, -0.5f},
                 {0.5f, 0.5f}
             });
+
+            _selectedConstraint = _constraints.size() - 1;
         }
 
         if (_selectedConstraint >= 0)
@@ -84,8 +86,17 @@ void KinematicChainApplication::onUpdate(
             {
                 auto& selected = _constraints[_selectedConstraint];
                 auto size = selected.max - selected.min;
-                ImGui::SliderFloat2("Size", glm::value_ptr(size), 0.01f, 10.0f);
-                selected.max = selected.min + size;
+                ImGui::DragFloat2(
+                    "Size",
+                    glm::value_ptr(size),
+                    0.05f,
+                    0.01f,
+                    10.0f
+                );
+
+                auto center = (selected.min + selected.max) / 2.0f;
+                selected.min = center - size * 0.5f;
+                selected.max = center + size * 0.5f;
             }
         }
     }
@@ -122,6 +133,56 @@ void KinematicChainApplication::onUpdate(
             glBindTexture(GL_TEXTURE_2D, 0);
 
             showTexturePreview(w, h);
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Path finding"))
+    {
+        ImGui::DragFloat2(
+            "Start conf",
+            glm::value_ptr(_startConfiguration),
+            0.02f
+        );
+
+        auto solutions = getValidSolutions();
+        if (solutions.size() > 0)
+        {
+            if (ImGui::Button("Store current##start"))
+            {
+                _startConfiguration = glm::vec2{
+                    solutions[0].first,
+                    solutions[0].second
+                };
+            }
+        }
+
+        ImGui::DragFloat2(
+            "End conf",
+            glm::value_ptr(_endConfiguration),
+            0.02f
+        );
+
+        if (solutions.size() > 0)
+        {
+            if (ImGui::Button("Store current##end"))
+            {
+                _endConfiguration = glm::vec2{
+                    solutions[0].first,
+                    solutions[0].second
+                };
+            }
+        }
+
+        if (_availabilityMapCreated)
+        {
+            ImGui::Button("Find path");
+        }
+        else
+        {
+            ImGui::TextColored(
+                {1.0f, 0.0f, 0.0f, 1.0f},
+                "Path cannot be found without configuration space generated."
+            );
         }
     }
 }
@@ -184,6 +245,8 @@ bool KinematicChainApplication::onMouseButton(int button, int action, int mods)
         {
             if (!grabConstraint())
             {
+                _selectedConstraint = -1;
+
                 glm::vec2 worldPos = getWorldCursorPos(
                     getCurrentMousePosition()
                 );
