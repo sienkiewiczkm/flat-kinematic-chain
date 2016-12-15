@@ -24,6 +24,12 @@ public:
     glm::vec2 getFirstArmEndPoint() const;
     glm::vec2 getSecondArmEndPoint() const;
 
+    void setTargetFrom(const glm::vec2& position);
+    glm::vec2 getTargetFrom() const { return _ikTarget; }
+
+    void setTargetTo(const glm::vec2& position);
+    glm::vec2 getTargetTo() const { return _ikSecondTarget; }
+
     std::pair<glm::vec2, glm::vec2> buildConfiguration(float alpha, float beta);
 
 private:
@@ -31,6 +37,7 @@ private:
 
 private:
     glm::vec2 _ikTarget;
+    glm::vec2 _ikSecondTarget;
     float _firstArmLength, _secondArmLength;
     float _thickness;
     float _alphaAngle;

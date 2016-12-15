@@ -149,6 +149,16 @@ glm::vec2 RoboticArmController::getSecondArmEndPoint() const
     return p2;
 }
 
+void RoboticArmController::setTargetFrom(const glm::vec2& position)
+{
+    _ikTarget = position;
+}
+
+void RoboticArmController::setTargetTo(const glm::vec2& position)
+{
+    _ikSecondTarget = position;
+}
+
 std::pair<glm::vec2, glm::vec2> RoboticArmController::buildConfiguration(
     float alpha,
     float beta

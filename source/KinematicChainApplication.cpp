@@ -227,6 +227,34 @@ void KinematicChainApplication::onRender()
         _standard2DEffect->end();
     }
 
+    _standard2DEffect->setViewMatrix({});
+    _standard2DEffect->setModelMatrix(glm::scale(
+        glm::translate(
+            glm::mat4{},
+            glm::vec3{_armController->getTargetFrom(), 0.0}
+        ),
+        glm::vec3{0.01, 0.01, 1.0}
+    ));
+    _standard2DEffect->setProjectionMatrix(projection);
+    _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
+    _standard2DEffect->begin();
+    _quadGeometry->render();
+    _standard2DEffect->end();
+
+    _standard2DEffect->setViewMatrix({});
+    _standard2DEffect->setModelMatrix(glm::scale(
+        glm::translate(
+            glm::mat4{},
+            glm::vec3{_armController->getTargetTo(), 0.0}
+        ),
+        glm::vec3{0.01, 0.01, 1.0}
+    ));
+    _standard2DEffect->setProjectionMatrix(projection);
+    _standard2DEffect->setDiffuseTexture(_testTexture->getTextureId());
+    _standard2DEffect->begin();
+    _quadGeometry->render();
+    _standard2DEffect->end();
+
     ImGuiApplication::onRender();
 }
 
@@ -240,7 +268,14 @@ bool KinematicChainApplication::onMouseButton(int button, int action, int mods)
         {
             if (!_lmbDown)
             {
-                grabConstraint();
+                if (!grabConstraint())
+                {
+                    glm::vec2 worldPos = getWorldCursorPos(
+                        getCurrentMousePosition()
+                    );
+
+                    _armController->setTargetFrom(worldPos);
+                }
             }
 
             _lmbDown = true;
@@ -250,6 +285,15 @@ bool KinematicChainApplication::onMouseButton(int button, int action, int mods)
             _isConstraintGrabbed = false;
             _lmbDown = false;
         }
+    }
+
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
+    {
+        glm::vec2 worldPos = getWorldCursorPos(
+            getCurrentMousePosition()
+        );
+
+        _armController->setTargetTo(worldPos);
     }
 
     return false;
@@ -310,9 +354,10 @@ glm::vec2 KinematicChainApplication::getWorldCursorPos(
     return worldPos;
 }
 
-void KinematicChainApplication::grabConstraint()
+bool KinematicChainApplication::grabConstraint()
 {
     auto worldCursorPos = getWorldCursorPos(getCurrentMousePosition());
+
     for (auto i = 0; i < _constraints.size(); ++i)
     {
         if (_constraints[i].contains(worldCursorPos))
@@ -320,9 +365,11 @@ void KinematicChainApplication::grabConstraint()
             _selectedConstraint = i;
             _isConstraintGrabbed = true;
             _previousGrabWorldPosition = worldCursorPos;
-            break;
+            return true;
         }
     }
+
+    return false;
 }
 
 bool KinematicChainApplication::checkArmConstraintCollision(

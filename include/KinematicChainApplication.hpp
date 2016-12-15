@@ -44,7 +44,7 @@ protected:
 
     glm::vec2 getWorldCursorPos(glm::vec2 screenMousePos) const;
     glm::mat4 getProjection() const;
-    void grabConstraint();
+    bool grabConstraint();
 
     bool checkArmConstraintCollision(glm::vec2 start, glm::vec2 end) const;
 
