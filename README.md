@@ -1,7 +1,5 @@
 # Flat Kinematic Chain
 
-Flat Kinematic Chain application is university project. You can find more details into /docs subdirectory (in Polish) or just compile it and play with it.
+Flat Kinematic Chain app solves inverse kinematics equations for a flat kinematic chain with two-segment arm. Application allows to find shortest path in configuration space that moves the arm from one configuration to another without touching any of the obstacles. Obstacles can be set up using simple interface during execution.
 
-If you intend to read source code: be aware that it is only prototype and code quality is poor.
-
-![Commit 2bd3a92 state](docs/screenshot-2bd3a92.png)
+![Animation](docs/animation.gif)
